@@ -46,7 +46,7 @@ public class Main {
             if ((value.charAt(0) == '0' && value.length() > 1) || value.equals("-0")) {
                 throw new RuntimeException("Invalid bencode integer");
             }
-            return Integer.parseInt(value);
+            return Long.parseLong(value);
         } else {
             throw new RuntimeException("Only strings are supported at the moment");
         }

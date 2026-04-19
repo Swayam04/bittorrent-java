@@ -1,16 +1,16 @@
 package parser;
 
 import type.BencodeString;
+import type.DictState;
+import type.ListState;
+import type.StructureState;
 
 import java.util.*;
 import java.util.logging.Logger;
 
 public class BencodeParser {
 
-    private Deque<Object> structureStack;
     private final ByteCursor byteCursor;
-    private Deque<BencodeString> keyStack = new ArrayDeque<>();
-
     private static final Logger logger = Logger.getLogger(BencodeParser.class.getName());
 
     private static final char STRING_DELIMITER = ':';
@@ -20,61 +20,57 @@ public class BencodeParser {
     private static final char END = 'e';
 
     public BencodeParser(String bencodedString) {
-        structureStack = new ArrayDeque<>();
         byteCursor = new ByteCursor(bencodedString.getBytes());
     }
 
     public BencodeParser(byte[] bencode) {
-        structureStack = new ArrayDeque<>();
         byteCursor = new ByteCursor(bencode);
     }
 
     public Object parseBencode() {
+        Deque<StructureState> structureStack = new ArrayDeque<>();
+        Object rootValue = null;
         while (byteCursor.hasRemaining()) {
             Object value = null;
+            StructureState newStructure = null;
             char curr = (char) byteCursor.peekByte();
             switch (curr) {
                 case INTEGER_START -> value = parseBencodedInteger();
                 case LIST_START -> {
-                    structureStack.push(new ArrayList<>());
                     byteCursor.readByte();
+                    newStructure = new ListState();
                 }
                 case DICT_START -> {
-                    structureStack.push(new TreeMap<BencodeString, Object>());
                     byteCursor.readByte();
+                    newStructure = new DictState();
                 }
                 case END -> {
-                    if (structureStack.isEmpty()) {
-                        throw new RuntimeException("Invalid Bencode");
-                    }
-                    value = structureStack.pop();
                     byteCursor.readByte();
+                    if (structureStack.isEmpty()) {
+                        throw new RuntimeException("Invalid Bencode: Unexpected 'e'");
+                    }
+                    value = structureStack.pop().getStructure();
                 }
                 default -> value = parseBencodedString();
             }
-            if (value != null) {
+            if (newStructure != null) {
+                structureStack.push(newStructure);
+            } else if (value != null) {
                 if (structureStack.isEmpty()) {
-                    return value;
-                }
-                Object structure = structureStack.peek();
-                if (structure instanceof List) {
-                    ((List) structure).add(value);
-                } else if (structure instanceof Map) {
-                    if (keyStack.isEmpty()) {
-                        if (!(value instanceof BencodeString)) {
-                            throw new RuntimeException("Invalid Bencode! Key for Dict not of type String");
-                        }
-                        keyStack.push((BencodeString) value);
-                    } else {
-                        if (keyStack.isEmpty()) {
-                            throw new RuntimeException("Invalid Bencode");
-                        }
-                        ((Map) structure).put(keyStack.pop(), value);
-                    }
+                    rootValue = value;
+                    break;
+                } else {
+                    structureStack.peek().addElement(value);
                 }
             }
         }
-        return null;
+        if (!structureStack.isEmpty()) {
+            throw new RuntimeException("Invalid Bencode: Unclosed structures remaining");
+        }
+        if (byteCursor.hasRemaining()) {
+            throw new RuntimeException("Invalid Bencode: Trailing garbage detected after root element.");
+        }
+        return rootValue;
     }
 
     public Long parseBencodedInteger() {

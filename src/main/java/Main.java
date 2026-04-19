@@ -1,4 +1,5 @@
 import com.google.gson.Gson;
+import parser.BencodeParser;
 // import com.dampcake.bencode.Bencode; - available if you need it!
 
 public class Main {
@@ -13,7 +14,7 @@ public class Main {
             String bencodedValue = args[1];
             Object decoded;
             try {
-                decoded = decodeBencode(bencodedValue);
+                decoded = new BencodeParser(bencodedValue).parseBencode();
             } catch (RuntimeException e) {
                 System.out.println(e.getMessage());
                 return;
@@ -25,31 +26,4 @@ public class Main {
         }
 
     }
-
-    static Object decodeBencode(String bencodedString) {
-        if (Character.isDigit(bencodedString.charAt(0))) {
-            int firstColonIndex = 0;
-            for (int i = 0; i < bencodedString.length(); i++) {
-                if (bencodedString.charAt(i) == ':') {
-                    firstColonIndex = i;
-                    break;
-                }
-            }
-            int length = Integer.parseInt(bencodedString.substring(0, firstColonIndex));
-            return bencodedString.substring(firstColonIndex + 1, firstColonIndex + 1 + length);
-        } else if (bencodedString.charAt(0) == 'i') {
-            int end = bencodedString.indexOf('e');
-            if (end == -1 || end == 1) {
-                throw new RuntimeException("Invalid bencode integer");
-            }
-            String value = bencodedString.substring(1, end);
-            if ((value.charAt(0) == '0' && value.length() > 1) || value.equals("-0")) {
-                throw new RuntimeException("Invalid bencode integer");
-            }
-            return Long.parseLong(value);
-        } else {
-            throw new RuntimeException("Only strings are supported at the moment");
-        }
-    }
-
 }

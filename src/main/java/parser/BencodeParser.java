@@ -29,7 +29,7 @@ public class BencodeParser {
         byteCursor = new ByteCursor(bencode);
     }
 
-    public String parseBencode() {
+    public Object parseBencode() {
         while (byteCursor.hasRemaining()) {
             Object value = null;
             char curr = (char) byteCursor.peekByte();
@@ -54,7 +54,7 @@ public class BencodeParser {
             }
             if (value != null) {
                 if (structureStack.isEmpty()) {
-                    return value.toString();
+                    return value;
                 }
                 Object structure = structureStack.peek();
                 if (structure instanceof List) {
@@ -74,7 +74,7 @@ public class BencodeParser {
                 }
             }
         }
-        return "";
+        return null;
     }
 
     public Long parseBencodedInteger() {

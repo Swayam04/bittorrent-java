@@ -5,13 +5,12 @@ import type.DictState;
 import type.ListState;
 import type.StructureState;
 
-import java.util.*;
-import java.util.logging.Logger;
+import java.util.Deque;
+import java.util.ArrayDeque;
 
 public class BencodeParser {
 
     private final ByteCursor byteCursor;
-    private static final Logger logger = Logger.getLogger(BencodeParser.class.getName());
 
     private static final char STRING_DELIMITER = ':';
     private static final char INTEGER_START = 'i';

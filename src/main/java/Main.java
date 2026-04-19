@@ -3,6 +3,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSerializer;
 import parser.BencodeParser;
 import type.BencodeString;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Map;
 // import com.dampcake.bencode.Bencode; - available if you need it!
 
 public class Main {
@@ -25,6 +30,15 @@ public class Main {
             }
             System.out.println(gson.toJson(decoded));
 
+        } else if ("info".equals(command)) {
+            String pathString = args[1];
+            byte[] fileContents = Files.readAllBytes(Paths.get(pathString));
+            Map<BencodeString, Object> decoded = (Map<BencodeString, Object>) new BencodeParser(fileContents).parseBencode();
+            String trackerUrl = decoded.get(new BencodeString("announce".getBytes())).toString();
+            Long length = (Long) ((Map<BencodeString, Object>) decoded.get(new BencodeString("info".getBytes())))
+                    .get(new BencodeString("length".getBytes()));
+            System.out.println("Tracker URL: " + trackerUrl);
+            System.out.println("Length: " + length);
         } else {
             System.out.println("Unknown command: " + command);
         }

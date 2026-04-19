@@ -57,4 +57,8 @@ public class BencodeString implements Comparable<BencodeString> {
     public int hashCode() {
         return Arrays.hashCode(data);
     }
+
+    public static BencodeString of(String key) {
+        return new BencodeString(key.getBytes(StandardCharsets.UTF_8));
+    }
 }

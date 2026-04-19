@@ -33,10 +33,15 @@ public class Main {
         } else if ("info".equals(command)) {
             String pathString = args[1];
             byte[] fileContents = Files.readAllBytes(Paths.get(pathString));
+
+            @SuppressWarnings("unchecked")
             Map<BencodeString, Object> decoded = (Map<BencodeString, Object>) new BencodeParser(fileContents).parseBencode();
-            String trackerUrl = decoded.get(new BencodeString("announce".getBytes())).toString();
-            Long length = (Long) ((Map<BencodeString, Object>) decoded.get(new BencodeString("info".getBytes())))
-                    .get(new BencodeString("length".getBytes()));
+            String trackerUrl = decoded.get(BencodeString.of("announce")).toString();
+
+            @SuppressWarnings("unchecked")
+            Map<BencodeString, Object> infoDict = (Map<BencodeString, Object>) decoded.get(BencodeString.of("info"));
+            Long length = (Long) infoDict.get(BencodeString.of("length"));
+
             System.out.println("Tracker URL: " + trackerUrl);
             System.out.println("Length: " + length);
         } else {

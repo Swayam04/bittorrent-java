@@ -76,50 +76,49 @@ public class BencodeParser {
     public Long parseBencodedInteger() {
         int start = byteCursor.position();
         byteCursor.readByte();
-        StringBuilder numString = new StringBuilder();
-        boolean ended = false;
-        while(byteCursor.hasRemaining() && !ended) {
-            char curr = byteCursor.readChar();
-            if (curr == END) {
-                ended = true;
-            } else {
-                numString.append(curr);
-            }
+
+        String value = readAsciiUntil(END, start);
+
+        if (value.startsWith("-0") || (value.startsWith("0") && value.length() > 1)) {
+            throw new RuntimeException("Invalid Bencode Integer (leading zeros) at position: " + start);
         }
-        if (!ended) {
-            throw new RuntimeException("Invalid Bencode Integer at position: " + start);
-        }
+
         try {
-            String value = numString.toString();
-            if (value.startsWith("0") && value.length() > 1 || value.startsWith("-0")) {
-                throw new RuntimeException("Invalid Bencode Integer at position: " + start);
-            }
             return Long.parseLong(value);
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid Bencode Integer at position: " + start, e);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid Bencode Integer format at position: " + start, e);
         }
     }
 
     public BencodeString parseBencodedString() {
         int start = byteCursor.position();
-        boolean ended = false;
-        StringBuilder lenString = new StringBuilder();
-        while (byteCursor.hasRemaining() && !ended) {
-            char curr = byteCursor.readChar();
-            if (curr == STRING_DELIMITER) {
-                ended = true;
-            } else {
-                lenString.append(curr);
-            }
+
+        String lenString = readAsciiUntil(STRING_DELIMITER, start);
+        int len;
+
+        try {
+            len = Integer.parseInt(lenString);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid Bencode String length at position: " + start, e);
         }
-        if (!ended) {
-            throw new RuntimeException("Invalid Bencode String at position: " + start);
+
+        if (len < 0 || byteCursor.remaining() < len) {
+            throw new RuntimeException("Invalid Bencode String bounds at position: " + start);
         }
-        int len = Integer.parseInt(lenString.toString());
-        if (byteCursor.remaining() < len) {
-            throw new RuntimeException("Invalid Bencode String at position: " + start);
-        }
+
         return new BencodeString(byteCursor.readBytes(len));
+    }
+
+    private String readAsciiUntil(char delimiter, int startPos) {
+        StringBuilder sb = new StringBuilder();
+        while (byteCursor.hasRemaining()) {
+            char curr = byteCursor.readChar();
+            if (curr == delimiter) {
+                return sb.toString();
+            }
+            sb.append(curr);
+        }
+        throw new RuntimeException("Invalid Bencode: Missing delimiter '" + delimiter + "' for structure starting at position: " + startPos);
     }
 
 
